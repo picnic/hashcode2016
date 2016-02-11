@@ -65,6 +65,8 @@ def solve_easy(in_path, out_path):
     out_file = OutFile(out_path)
     states = DroneStates(in_file)
     d = 0  # Current drone number
+    w = 0  # Current weight
+    products_to_deliver = []
     new_orders = sort_orders(in_file.orders)
     for o in new_orders:
         order_id = o["index"]
@@ -72,6 +74,27 @@ def solve_easy(in_path, out_path):
         for product_id in order["product_ids"]:
             # Find a warehouse where the product is available
             warehouse = find_warehouse(in_file, product_id, states.states[d]["pos"])
+            if w + in_file.weights[product_id] > in_file.max_load:
+                # We have to change the drone
+
+                # The drone number d deliver the product
+                try:
+                    states.deliver(d, order_id)
+
+                    # If there is still time, output the command
+                    for p in products_to_deliver:
+                        out_file.deliver(d, order_id, p, 1)
+                except NoTimeLeft:
+                    pass
+
+                d += 1
+                w = 0
+                products_to_deliver = []
+                if d >= in_file.d:
+                    d = 0
+
+            w += in_file.weights[product_id]
+            products_to_deliver.append(product_id)
             # The drone number d take this product
             try:
                 states.load(d, warehouse)
@@ -80,17 +103,23 @@ def solve_easy(in_path, out_path):
                 out_file.load(d, warehouse, product_id, 1)
             except NoTimeLeft:
                 pass
-            # The drone number d deliver the product
-            try:
-                states.deliver(d, order_id)
 
-                # If there is still time, output the command
-                out_file.deliver(d, order_id, product_id, 1)
-            except NoTimeLeft:
-                pass
-            d += 1
-            if d >= in_file.d:
-                d = 0
+        # Empty the drone at end of order even is some space is left
+        try:
+            states.deliver(d, order_id)
+
+            # If there is still time, output the command
+            for p in products_to_deliver:
+                out_file.deliver(d, order_id, p, 1)
+        except NoTimeLeft:
+            pass
+
+        d += 1
+        w = 0
+        products_to_deliver = []
+        if d >= in_file.d:
+            d = 0
+
     out_file.write()
 
 
