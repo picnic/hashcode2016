@@ -52,11 +52,12 @@ def find_warehouse(in_file, product_id, drone_pos):
     return found_warehouses[0]["id"]
 
 
-def sort_orders(orders):
+def sort_orders(orders, pos_warehouse):
     new_orders = []
     for i in range(0, len(orders)):
-        new_orders.append({"size": len(orders[i]["product_ids"]), "index": i})
-    new_orders.sort(key=operator.itemgetter("size"))
+        dist = compute_distance(orders[i]["coords"], pos_warehouse)
+        new_orders.append({"size": len(orders[i]["product_ids"]), "index": i, "dist": dist})
+    new_orders.sort(key=operator.itemgetter("size", "dist"))
     return new_orders
 
 
@@ -67,7 +68,7 @@ def solve_easy(in_path, out_path):
     d = 0  # Current drone number
     w = 0  # Current weight
     products_to_deliver = []
-    new_orders = sort_orders(in_file.orders)
+    new_orders = sort_orders(in_file.orders, in_file.warehouses[0]["coords"])
     for o in new_orders:
         order_id = o["index"]
         order = in_file.orders[order_id]
